@@ -1,13 +1,53 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { Button, Container, Title, Text, Stack, Group } from '@mantine/core';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+
+export default function HomePage() {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/auth/signin');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <h1 className="text-5xl font-bold text-zinc-900 dark:text-white sm:text-6xl">
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-      </main>
-    </div>
+    <Container size="md" py={40}>
+      <Stack gap="xl">
+        <Title order={1}>Добро пожаловать в Linlery</Title>
+        
+        {user ? (
+          <>
+            <Text size="lg">
+              Вы вошли как: <strong>{user.email}</strong>
+            </Text>
+            <Group>
+              <Button onClick={handleSignOut} variant="outline">
+                Выйти
+              </Button>
+              <Button onClick={() => router.push('/dashboard')} variant="filled">
+                Перейти в Dashboard
+              </Button>
+            </Group>
+          </>
+        ) : (
+          <>
+            <Text size="lg">
+              Пожалуйста, войдите в систему или зарегистрируйтесь
+            </Text>
+            <Group>
+              <Button onClick={() => router.push('/auth/signin')} variant="filled">
+                Войти
+              </Button>
+              <Button onClick={() => router.push('/auth/signup')} variant="outline">
+                Регистрация
+              </Button>
+            </Group>
+          </>
+        )}
+      </Stack>
+    </Container>
   );
 }

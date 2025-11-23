@@ -2,7 +2,7 @@
 
 ## 1. Общее резюме
 
-**Название (рабочее):** Keepify
+**Название (рабочее):** Linlery
 **Стек:** Next.js + TypeScript, Mantine UI, Supabase (Postgres + Auth + Storage), Storybook (UI), Swagger / OpenAPI (API), Vercel (деплой)
 **Идея:** удобное, приватное и современное приложение для быстрой фиксации «находок»: товаров, обзоров, ссылок, скриншотов, заметок. Пользователь создаёт карточки (card) с полями `title`, `link`, `place`, `price`, `notes`, `images`, присваивает категории/теги, фильтрует и организует коллекции.
 
@@ -440,7 +440,7 @@ created_at timestamptz default now();
 Можешь использовать эти промты как «шаблоны» для генерации кода/документации:
 
 * Архитектурный / README промт:
-  `"Составь подробный README для проекта Keepify (Next.js + TypeScript + Supabase + Mantine), включи архитектуру, env переменные, команды для разработки, тестирования и деплоя на Vercel. Отдельно — краткий FAQ."`
+  `"Составь подробный README для проекта Linkery (Next.js + TypeScript + Supabase + Mantine), включи архитектуру, env переменные, команды для разработки, тестирования и деплоя на Vercel. Отдельно — краткий FAQ."`
 
 * Компонентный промт:
   `"Напиши компонент CardForm на TypeScript + React + Mantine с zod валидацией. Поддержка: title, link, price, notes, tags (input + suggestion), image uploader (drag&drop). Добавь prop types и пример использования."`
