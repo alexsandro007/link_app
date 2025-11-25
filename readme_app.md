@@ -2,7 +2,7 @@
 
 ## 1. Общее резюме
 
-**Название (рабочее):** Linlery
+**Название (рабочее):** Linkery
 **Стек:** Next.js + TypeScript, Mantine UI, Supabase (Postgres + Auth + Storage), Storybook (UI), Swagger / OpenAPI (API), Vercel (деплой)
 **Идея:** удобное, приватное и современное приложение для быстрой фиксации «находок»: товаров, обзоров, ссылок, скриншотов, заметок. Пользователь создаёт карточки (card) с полями `title`, `link`, `place`, `price`, `notes`, `images`, присваивает категории/теги, фильтрует и организует коллекции.
 
@@ -269,7 +269,7 @@ created_at timestamptz default now();
 **Промты для ИИ:**
 
 1. "Напиши React-контекст `AuthProvider` для Next.js на TypeScript, использующий `@supabase/supabase-js`, который хранит сессию, предоставляет `user`, `signIn`, `signOut`, `signUp` и автологин при загрузке страницы."
-2. "Сгенерируй страницу `pages/auth/signin.tsx` с формой входа, валидацией zod и интеграцией Supabase Auth. Подключи Mantine UI компоненты."
+2. "Сгенерируй страницу `pages/auth/signin.tsx` с формой входа, встроенную валидацию Mantine и интеграцией Supabase Auth. Подключи Mantine UI компоненты."
 3. "Напиши middleware/HighOrderComponent для защиты страниц — если пользователь не авторизован, перенаправить на /auth/signin."
 
 ---
@@ -298,13 +298,13 @@ created_at timestamptz default now();
 **Действия:**
 
 * Реализовать API-роуты: GET/POST/PUT/DELETE.
-* Подключить серверную валидацию (zod).
+* Подключить серверную валидацию (встроенную валидацию Mantine).
 * Создать `openapi.json` и endpoint `/api/docs` (swagger-ui-react).
 * Сделать примеры запросов/ответов.
 
 **Промты для ИИ:**
 
-1. "Напиши Next.js API route `POST /api/cards` на TypeScript: валидация входа через zod, проверка сессии Supabase, сохранение записи в таблице `cards` и возврат созданной сущности."
+1. "Напиши Next.js API route `POST /api/cards` на TypeScript: валидация входа через встроенную валидацию Mantine, проверка сессии Supabase, сохранение записи в таблице `cards` и возврат созданной сущности."
 2. "Сгенерируй `openapi.json` для основных маршрутов `cards` и `categories`, опиши схемы `Card`, `Category`, `Image` и добавь примеры запросов и ответов."
 3. "Напиши компонент `/pages/api/docs.tsx`, который рендерит Swagger UI (`swagger-ui-react`) и подгружает `openapi.json`."
 

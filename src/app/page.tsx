@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <Container size="md" py={40}>
       <Stack gap="xl">
-        <Title order={1}>Добро пожаловать в Linlery</Title>
+        <Title order={1}>Добро пожаловать в Linkery</Title>
         
         {user ? (
           <>

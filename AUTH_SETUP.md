@@ -1,4 +1,4 @@
-# Authentication Setup - Linlery
+# Authentication Setup - Linkery
 
 ## Обзор
 
