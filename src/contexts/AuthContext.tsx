@@ -93,9 +93,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         },
       });
       
-      // Логируем для отладки
-      console.log('SignUp response:', { data, error });
-      
       return { error };
     } catch (error) {
       console.error('SignUp catch error:', error);
