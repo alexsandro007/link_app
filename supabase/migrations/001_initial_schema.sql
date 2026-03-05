@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
 );
 
 -- Индекс для быстрого поиска категорий пользователя
-CREATE INDEX idx_categories_user_id ON public.categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
 
 -- Комментарии к таблице
 COMMENT ON TABLE public.categories IS 'Категории карточек, принадлежащие пользователям';
@@ -57,25 +57,25 @@ CREATE TABLE IF NOT EXISTS public.cards (
 );
 
 -- Индекс для быстрого поиска карточек пользователя
-CREATE INDEX idx_cards_user_id ON public.cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_cards_user_id ON public.cards(user_id);
 
 -- Индекс для поиска по категории
-CREATE INDEX idx_cards_category_id ON public.cards(category_id);
+CREATE INDEX IF NOT EXISTS idx_cards_category_id ON public.cards(category_id);
 
 -- Индекс для фильтрации публичных карточек
-CREATE INDEX idx_cards_is_public ON public.cards(is_public) WHERE is_public = TRUE;
+CREATE INDEX IF NOT EXISTS idx_cards_is_public ON public.cards(is_public) WHERE is_public = TRUE;
 
 -- Индекс для сортировки по дате создания
-CREATE INDEX idx_cards_created_at ON public.cards(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cards_created_at ON public.cards(created_at DESC);
 
 -- Индекс для сортировки по цене
-CREATE INDEX idx_cards_price ON public.cards(price) WHERE price IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_cards_price ON public.cards(price) WHERE price IS NOT NULL;
 
 -- GIN индекс для поиска по массиву тегов
-CREATE INDEX idx_cards_tags ON public.cards USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_cards_tags ON public.cards USING GIN(tags);
 
 -- Full-text search индекс для поиска по title и notes
-CREATE INDEX idx_cards_search ON public.cards 
+CREATE INDEX IF NOT EXISTS idx_cards_search ON public.cards 
 USING GIN(to_tsvector('russian', title || ' ' || COALESCE(notes, '')));
 
 -- Комментарии к таблице
@@ -111,10 +111,10 @@ CREATE TABLE IF NOT EXISTS public.images (
 );
 
 -- Индекс для быстрого поиска изображений карточки
-CREATE INDEX idx_images_card_id ON public.images(card_id);
+CREATE INDEX IF NOT EXISTS idx_images_card_id ON public.images(card_id);
 
 -- Индекс для поиска изображений пользователя
-CREATE INDEX idx_images_user_id ON public.images(user_id);
+CREATE INDEX IF NOT EXISTS idx_images_user_id ON public.images(user_id);
 
 -- Комментарии к таблице
 COMMENT ON TABLE public.images IS 'Изображения, прикрепленные к карточкам';
@@ -133,12 +133,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Триггер для categories
+DROP TRIGGER IF EXISTS update_categories_updated_at ON public.categories;
 CREATE TRIGGER update_categories_updated_at
     BEFORE UPDATE ON public.categories
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Триггер для cards
+DROP TRIGGER IF EXISTS update_cards_updated_at ON public.cards;
 CREATE TRIGGER update_cards_updated_at
     BEFORE UPDATE ON public.cards
     FOR EACH ROW
@@ -156,20 +158,21 @@ ALTER TABLE public.images ENABLE ROW LEVEL SECURITY;
 -- =====================================================
 -- ПОЛИТИКИ для categories
 -- =====================================================
-
--- Пользователь может просматривать только свои категории
+DROP POLICY IF EXISTS "Users can view their own categories" ON public.categories;
 CREATE POLICY "Users can view their own categories"
     ON public.categories
     FOR SELECT
     USING (auth.uid() = user_id);
 
 -- Пользователь может создавать категории
+DROP POLICY IF EXISTS "Users can create their own categories" ON public.categories;
 CREATE POLICY "Users can create their own categories"
     ON public.categories
     FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 -- Пользователь может обновлять свои категории
+DROP POLICY IF EXISTS "Users can update their own categories" ON public.categories;
 CREATE POLICY "Users can update their own categories"
     ON public.categories
     FOR UPDATE
@@ -177,6 +180,7 @@ CREATE POLICY "Users can update their own categories"
     WITH CHECK (auth.uid() = user_id);
 
 -- Пользователь может удалять свои категории
+DROP POLICY IF EXISTS "Users can delete their own categories" ON public.categories;
 CREATE POLICY "Users can delete their own categories"
     ON public.categories
     FOR DELETE
@@ -187,6 +191,7 @@ CREATE POLICY "Users can delete their own categories"
 -- =====================================================
 
 -- Пользователь может просматривать свои карточки или публичные
+DROP POLICY IF EXISTS "Users can view their own cards or public cards" ON public.cards;
 CREATE POLICY "Users can view their own cards or public cards"
     ON public.cards
     FOR SELECT
@@ -196,12 +201,14 @@ CREATE POLICY "Users can view their own cards or public cards"
     );
 
 -- Пользователь может создавать карточки
+DROP POLICY IF EXISTS "Users can create their own cards" ON public.cards;
 CREATE POLICY "Users can create their own cards"
     ON public.cards
     FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 -- Пользователь может обновлять свои карточки
+DROP POLICY IF EXISTS "Users can update their own cards" ON public.cards;
 CREATE POLICY "Users can update their own cards"
     ON public.cards
     FOR UPDATE
@@ -209,6 +216,7 @@ CREATE POLICY "Users can update their own cards"
     WITH CHECK (auth.uid() = user_id);
 
 -- Пользователь может удалять свои карточки
+DROP POLICY IF EXISTS "Users can delete their own cards" ON public.cards;
 CREATE POLICY "Users can delete their own cards"
     ON public.cards
     FOR DELETE
@@ -220,6 +228,7 @@ CREATE POLICY "Users can delete their own cards"
 
 -- Пользователь может просматривать изображения своих карточек
 -- или изображения публичных карточек
+DROP POLICY IF EXISTS "Users can view images of accessible cards" ON public.images;
 CREATE POLICY "Users can view images of accessible cards"
     ON public.images
     FOR SELECT
@@ -233,6 +242,7 @@ CREATE POLICY "Users can view images of accessible cards"
     );
 
 -- Пользователь может загружать изображения к своим карточкам
+DROP POLICY IF EXISTS "Users can upload images to their own cards" ON public.images;
 CREATE POLICY "Users can upload images to their own cards"
     ON public.images
     FOR INSERT
@@ -246,6 +256,7 @@ CREATE POLICY "Users can upload images to their own cards"
     );
 
 -- Пользователь может удалять свои изображения
+DROP POLICY IF EXISTS "Users can delete their own images" ON public.images;
 CREATE POLICY "Users can delete their own images"
     ON public.images
     FOR DELETE

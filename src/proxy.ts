@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 const protectedRoutes = ['/dashboard', '/profile', '/settings'];
 
 // Маршруты для неаутентифицированных пользователей
-const authRoutes = ['/auth/signin', '/auth/signup'];
+const authRoutes = ['/auth/signin', '/auth/signup', '/auth/forgot-password', '/auth/reset-password'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
 
     // Если пользователь авторизован и пытается зайти на страницу входа/регистрации
     if (isAuthRoute && session) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
     return NextResponse.next();

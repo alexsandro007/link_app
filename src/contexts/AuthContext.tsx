@@ -37,12 +37,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Получаем текущую сессию при загрузке
+    // Получаем текущего пользователя при загрузке.
+    // getUser() верифицирует токен через сервер Supabase (в отличие от getSession(),
+    // которая читает данные из localStorage без проверки подлинности).
     const initializeAuth = async () => {
       try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        // Получаем сессию только для доступа к токенам (не для проверки подлинности)
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setUser(currentUser ?? null);
         setSession(currentSession);
-        setUser(currentSession?.user ?? null);
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {

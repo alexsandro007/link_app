@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from '@mantine/form';
 import {
   TextInput,
@@ -15,6 +15,7 @@ import {
   Stack,
   Alert,
 } from '@mantine/core';
+import { IconCheck } from '@tabler/icons-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 
@@ -25,9 +26,16 @@ interface SignInFormValues {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const passwordReset = searchParams.get('reset') === 'success';
+  const callbackError = searchParams.get('error');
   const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    callbackError === 'auth_callback_failed' || callbackError === 'missing_code'
+      ? 'Ссылка недействительна или устарела. Запросите новую ссылку.'
+      : null,
+  );
 
   const form = useForm<SignInFormValues>({
     initialValues: {
@@ -56,15 +64,28 @@ export default function SignInPage() {
       const { error: signInError } = await signIn(values.email, values.password);
 
       if (signInError) {
-        setError(signInError.message || 'Ошибка при входе');
+        const msg = signInError.message ?? '';
+        if (msg.toLowerCase().includes('invalid login')) {
+          setError('Неверный email или пароль');
+        } else if (msg.toLowerCase().includes('email not confirmed')) {
+          setError('Email не подтверждён. Проверьте почту и перейдите по ссылке из письма.');
+        } else {
+          setError(msg || 'Ошибка при входе');
+        }
         return;
       }
 
       // Успешный вход
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError('Произошла непредвиденная ошибка');
+      const isOffline =
+        err instanceof TypeError && err.message.toLowerCase().includes('fetch');
+      setError(
+        isOffline
+          ? 'Нет подключения к интернету. Проверьте сеть и попробуйте снова.'
+          : 'Произошла непредвиденная ошибка',
+      );
       console.error('Sign in error:', err);
     } finally {
       setLoading(false);
@@ -86,6 +107,11 @@ export default function SignInPage() {
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
+            {passwordReset && (
+              <Alert icon={<IconCheck size={16} />} color="teal" title="Пароль изменён">
+                Вы успешно сбросили пароль. Войдите с новым паролем.
+              </Alert>
+            )}
             {error && (
               <Alert color="red" title="Ошибка">
                 {error}

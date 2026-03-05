@@ -91,7 +91,13 @@ export default function SignUpPage() {
         router.push('/auth/signin');
       }, 3000);
     } catch (err) {
-      setError('Произошла непредвиденная ошибка');
+      const isOffline =
+        err instanceof TypeError && (err as TypeError).message.toLowerCase().includes('fetch');
+      setError(
+        isOffline
+          ? 'Нет подключения к интернету. Проверьте сеть и попробуйте снова.'
+          : 'Произошла непредвиденная ошибка',
+      );
       console.error('Sign up error:', err);
     } finally {
       setLoading(false);

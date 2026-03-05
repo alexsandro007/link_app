@@ -1,0 +1,490 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Linkery API",
+    "description": "REST API for the Linkery bookmark manager. All endpoints require an authenticated Supabase session (cookie-based).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Linkery"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    { "name": "Cards", "description": "Bookmark cards management" },
+    { "name": "Categories", "description": "Category management" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-access-token",
+        "description": "Supabase session cookie set automatically after sign-in"
+      }
+    },
+    "schemas": {
+      "Card": {
+        "type": "object",
+        "required": ["id", "user_id", "url", "title", "tags", "is_public", "is_archived", "click_count", "created_at", "updated_at"],
+        "properties": {
+          "id":          { "type": "string", "format": "uuid", "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+          "user_id":     { "type": "string", "format": "uuid", "example": "a1b2c3d4-0000-0000-0000-000000000001" },
+          "category_id": { "type": "string", "format": "uuid", "nullable": true, "example": "b2c3d4e5-0000-0000-0000-000000000002" },
+          "url":         { "type": "string", "format": "uri", "example": "https://nextjs.org/docs" },
+          "title":       { "type": "string", "maxLength": 500, "example": "Next.js Documentation" },
+          "description": { "type": "string", "nullable": true, "example": "Official Next.js docs" },
+          "notes":       { "type": "string", "nullable": true, "example": "Read later" },
+          "image_url":   { "type": "string", "format": "uri", "nullable": true, "example": "https://nextjs.org/og.png" },
+          "favicon_url": { "type": "string", "format": "uri", "nullable": true, "example": "https://nextjs.org/favicon.ico" },
+          "tags":        { "type": "array", "items": { "type": "string" }, "example": ["nextjs", "react", "docs"] },
+          "is_public":   { "type": "boolean", "example": false },
+          "is_archived": { "type": "boolean", "example": false },
+          "click_count": { "type": "integer", "example": 0 },
+          "created_at":  { "type": "string", "format": "date-time", "example": "2024-01-15T10:30:00Z" },
+          "updated_at":  { "type": "string", "format": "date-time", "example": "2024-01-15T10:30:00Z" }
+        }
+      },
+      "CreateCardRequest": {
+        "type": "object",
+        "required": ["url", "title"],
+        "properties": {
+          "url":         { "type": "string", "format": "uri", "example": "https://nextjs.org/docs" },
+          "title":       { "type": "string", "maxLength": 500, "example": "Next.js Documentation" },
+          "description": { "type": "string", "example": "Official Next.js docs" },
+          "notes":       { "type": "string", "example": "Read later" },
+          "image_url":   { "type": "string", "format": "uri", "example": "https://nextjs.org/og.png" },
+          "favicon_url": { "type": "string", "format": "uri", "example": "https://nextjs.org/favicon.ico" },
+          "tags":        { "type": "array", "items": { "type": "string" }, "example": ["nextjs", "react"] },
+          "category_id": { "type": "string", "format": "uuid", "example": "b2c3d4e5-0000-0000-0000-000000000002" },
+          "is_public":   { "type": "boolean", "default": false }
+        }
+      },
+      "UpdateCardRequest": {
+        "type": "object",
+        "properties": {
+          "url":         { "type": "string", "format": "uri" },
+          "title":       { "type": "string", "maxLength": 500 },
+          "description": { "type": "string", "nullable": true },
+          "notes":       { "type": "string", "nullable": true },
+          "image_url":   { "type": "string", "format": "uri", "nullable": true },
+          "favicon_url": { "type": "string", "format": "uri", "nullable": true },
+          "tags":        { "type": "array", "items": { "type": "string" } },
+          "category_id": { "type": "string", "format": "uuid", "nullable": true },
+          "is_public":   { "type": "boolean" },
+          "is_archived": { "type": "boolean" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "user_id", "name", "slug", "is_public", "created_at", "updated_at"],
+        "properties": {
+          "id":          { "type": "string", "format": "uuid", "example": "b2c3d4e5-0000-0000-0000-000000000002" },
+          "user_id":     { "type": "string", "format": "uuid", "example": "a1b2c3d4-0000-0000-0000-000000000001" },
+          "name":        { "type": "string", "maxLength": 100, "example": "Development" },
+          "slug":        { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9-]+$", "example": "development" },
+          "description": { "type": "string", "nullable": true, "example": "Dev resources" },
+          "color":       { "type": "string", "nullable": true, "pattern": "^#[0-9A-Fa-f]{6}$", "example": "#4dabf7" },
+          "icon":        { "type": "string", "nullable": true, "example": "code" },
+          "is_public":   { "type": "boolean", "example": false },
+          "created_at":  { "type": "string", "format": "date-time", "example": "2024-01-15T10:30:00Z" },
+          "updated_at":  { "type": "string", "format": "date-time", "example": "2024-01-15T10:30:00Z" }
+        }
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "required": ["name", "slug"],
+        "properties": {
+          "name":        { "type": "string", "maxLength": 100, "example": "Development" },
+          "slug":        { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9-]+$", "example": "development" },
+          "description": { "type": "string", "example": "Dev resources and tutorials" },
+          "color":       { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$", "example": "#4dabf7" },
+          "icon":        { "type": "string", "example": "code" },
+          "is_public":   { "type": "boolean", "default": false }
+        }
+      },
+      "UpdateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "name":        { "type": "string", "maxLength": 100 },
+          "slug":        { "type": "string", "maxLength": 100, "pattern": "^[a-z0-9-]+$" },
+          "description": { "type": "string", "nullable": true },
+          "color":       { "type": "string", "nullable": true, "pattern": "^#[0-9A-Fa-f]{6}$" },
+          "icon":        { "type": "string", "nullable": true },
+          "is_public":   { "type": "boolean" }
+        }
+      },
+      "Image": {
+        "type": "object",
+        "required": ["id", "user_id", "created_at"],
+        "properties": {
+          "id":            { "type": "string", "format": "uuid" },
+          "user_id":       { "type": "string", "format": "uuid" },
+          "card_id":       { "type": "string", "format": "uuid", "nullable": true },
+          "original_url":  { "type": "string", "format": "uri", "nullable": true },
+          "storage_path":  { "type": "string", "nullable": true },
+          "file_size":     { "type": "integer", "nullable": true, "example": 204800 },
+          "mime_type":     { "type": "string", "nullable": true, "example": "image/webp" },
+          "width":         { "type": "integer", "nullable": true, "example": 1200 },
+          "height":        { "type": "integer", "nullable": true, "example": 630 },
+          "alt_text":      { "type": "string", "nullable": true },
+          "created_at":    { "type": "string", "format": "date-time" }
+        }
+      },
+      "PaginatedCards": {
+        "type": "object",
+        "properties": {
+          "data":  { "type": "array", "items": { "$ref": "#/components/schemas/Card" } },
+          "count": { "type": "integer", "example": 42 },
+          "page":  { "type": "integer", "example": 1 },
+          "limit": { "type": "integer", "example": 20 }
+        }
+      },
+      "PaginatedCategories": {
+        "type": "object",
+        "properties": {
+          "data":  { "type": "array", "items": { "$ref": "#/components/schemas/Category" } },
+          "count": { "type": "integer", "example": 8 },
+          "page":  { "type": "integer", "example": 1 },
+          "limit": { "type": "integer", "example": 50 }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error":   { "type": "string", "example": "Unauthorized" },
+          "details": { "type": "string", "example": "JWT expired" }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["error", "fields"],
+        "properties": {
+          "error":  { "type": "string", "example": "Validation failed" },
+          "fields": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "example": { "url": "Must be a valid URL", "title": "Title is required" }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid session",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" },
+            "example": { "error": "Unauthorized" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ApiError" },
+            "example": { "error": "Card not found" }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Validation failed",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ValidationError" }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "cookieAuth": [] }],
+  "paths": {
+    "/api/cards": {
+      "get": {
+        "tags": ["Cards"],
+        "summary": "List cards",
+        "description": "Returns a paginated list of the authenticated user's cards.",
+        "operationId": "listCards",
+        "parameters": [
+          { "name": "page",        "in": "query", "schema": { "type": "integer", "default": 1 },   "description": "Page number (1-based)" },
+          { "name": "limit",       "in": "query", "schema": { "type": "integer", "default": 20, "maximum": 100 }, "description": "Items per page" },
+          { "name": "category_id", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Filter by category" },
+          { "name": "archived",    "in": "query", "schema": { "type": "boolean" }, "description": "Include archived cards (default: false)" },
+          { "name": "tag",         "in": "query", "schema": { "type": "string" }, "description": "Filter by tag" },
+          { "name": "search",      "in": "query", "schema": { "type": "string" }, "description": "Full-text search on title and description" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of cards",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedCards" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                      "user_id": "a1b2c3d4-0000-0000-0000-000000000001",
+                      "category_id": null,
+                      "url": "https://nextjs.org/docs",
+                      "title": "Next.js Documentation",
+                      "description": "Official Next.js docs",
+                      "notes": null,
+                      "image_url": null,
+                      "favicon_url": null,
+                      "tags": ["nextjs"],
+                      "is_public": false,
+                      "is_archived": false,
+                      "click_count": 0,
+                      "created_at": "2024-01-15T10:30:00Z",
+                      "updated_at": "2024-01-15T10:30:00Z"
+                    }
+                  ],
+                  "count": 1,
+                  "page": 1,
+                  "limit": 20
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Cards"],
+        "summary": "Create card",
+        "description": "Creates a new bookmark card for the authenticated user.",
+        "operationId": "createCard",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCardRequest" },
+              "example": {
+                "url": "https://nextjs.org/docs",
+                "title": "Next.js Documentation",
+                "description": "Official Next.js docs",
+                "tags": ["nextjs", "react"],
+                "is_public": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Card created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Card" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/cards/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Card ID" }
+      ],
+      "get": {
+        "tags": ["Cards"],
+        "summary": "Get card",
+        "description": "Returns a single card by ID.",
+        "operationId": "getCard",
+        "responses": {
+          "200": {
+            "description": "Card details",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Card" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Cards"],
+        "summary": "Update card",
+        "description": "Partially updates a card. Only provided fields are changed.",
+        "operationId": "updateCard",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateCardRequest" },
+              "example": {
+                "title": "Next.js Docs (updated)",
+                "tags": ["nextjs", "react", "framework"],
+                "is_archived": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated card",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Card" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "delete": {
+        "tags": ["Cards"],
+        "summary": "Delete card",
+        "description": "Permanently deletes a card.",
+        "operationId": "deleteCard",
+        "responses": {
+          "204": { "description": "Card deleted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "List categories",
+        "description": "Returns a paginated list of the authenticated user's categories.",
+        "operationId": "listCategories",
+        "parameters": [
+          { "name": "page",  "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of categories",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaginatedCategories" },
+                "example": {
+                  "data": [
+                    {
+                      "id": "b2c3d4e5-0000-0000-0000-000000000002",
+                      "user_id": "a1b2c3d4-0000-0000-0000-000000000001",
+                      "name": "Development",
+                      "slug": "development",
+                      "description": "Dev resources",
+                      "color": "#4dabf7",
+                      "icon": "code",
+                      "is_public": false,
+                      "created_at": "2024-01-01T00:00:00Z",
+                      "updated_at": "2024-01-01T00:00:00Z"
+                    }
+                  ],
+                  "count": 1,
+                  "page": 1,
+                  "limit": 50
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Categories"],
+        "summary": "Create category",
+        "description": "Creates a new category for the authenticated user.",
+        "operationId": "createCategory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateCategoryRequest" },
+              "example": {
+                "name": "Development",
+                "slug": "development",
+                "description": "Dev resources and tutorials",
+                "color": "#4dabf7",
+                "icon": "code",
+                "is_public": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Category" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/categories/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Category ID" }
+      ],
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Get category",
+        "description": "Returns a single category by ID.",
+        "operationId": "getCategory",
+        "responses": {
+          "200": {
+            "description": "Category details",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Category" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Categories"],
+        "summary": "Update category",
+        "description": "Partially updates a category.",
+        "operationId": "updateCategory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateCategoryRequest" },
+              "example": {
+                "name": "Dev Tools",
+                "color": "#74c0fc"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated category",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Category" } }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      },
+      "delete": {
+        "tags": ["Categories"],
+        "summary": "Delete category",
+        "description": "Permanently deletes a category. Cards in this category will have their category_id set to null.",
+        "operationId": "deleteCategory",
+        "responses": {
+          "204": { "description": "Category deleted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  }
+}
