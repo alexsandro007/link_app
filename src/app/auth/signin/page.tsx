@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from '@mantine/form';
 import {
@@ -14,6 +14,8 @@ import {
   Anchor,
   Stack,
   Alert,
+  Loader,
+  Center,
 } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +26,7 @@ interface SignInFormValues {
   password: string;
 }
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const passwordReset = searchParams.get('reset') === 'success';
@@ -147,5 +149,13 @@ export default function SignInPage() {
         </form>
       </Paper>
     </Container>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<Center mt={80}><Loader /></Center>}>
+      <SignInForm />
+    </Suspense>
   );
 }
