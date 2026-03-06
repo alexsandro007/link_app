@@ -24,6 +24,7 @@ function makeCard(overrides: Partial<Card> & { id: string }): Card {
     image_url: null,
     favicon_url: null,
     tags: [],
+    image_urls: [],
     is_public: false,
     is_archived: false,
     click_count: 0,
