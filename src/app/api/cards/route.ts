@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sanitizeText, sanitizeOptional, sanitizeTags } from '@/lib/sanitize';
 import type { CreateCardBody, ApiError, PaginatedResponse, Card } from '@/types/database';
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -143,11 +144,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     price,
     currency,
     image_url,
+    image_urls,
     favicon_url,
     tags,
     category_id,
     is_public,
   } = body as CreateCardBody;
+
+  // Итоговый массив и первичный URL
+  const resolvedImageUrls: string[] = Array.isArray(image_urls) ? image_urls : (image_url ? [image_url] : []);
+  const resolvedImageUrl = resolvedImageUrls[0] ?? null;
 
   // Verify category belongs to user if provided
   if (category_id) {
@@ -168,15 +174,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     .insert({
       user_id: user.id,
       url: url || null,
-      title: title.trim(),
-      description: description ?? null,
-      notes: notes ?? null,
-      place: place ?? null,
+      title: sanitizeText(title),
+      description: sanitizeOptional(description),
+      notes: sanitizeOptional(notes),
+      place: sanitizeOptional(place),
       price: price ?? null,
       currency: currency ?? 'USD',
-      image_url: image_url ?? null,
+      image_url: resolvedImageUrl,
+      image_urls: resolvedImageUrls,
       favicon_url: favicon_url ?? null,
-      tags: tags ?? [],
+      tags: tags ? sanitizeTags(tags) : [],
       category_id: category_id ?? null,
       is_public: is_public ?? false,
     })

@@ -23,6 +23,7 @@ export interface Card {
   price: number | null;
   currency: string;
   image_url: string | null;
+  image_urls: string[];
   favicon_url: string | null;
   tags: string[];
   is_public: boolean;
@@ -57,6 +58,7 @@ export interface CreateCardBody {
   price?: number | null;
   currency?: string;
   image_url?: string;
+  image_urls?: string[];
   favicon_url?: string;
   tags?: string[];
   category_id?: string;
@@ -72,6 +74,7 @@ export interface UpdateCardBody {
   price?: number | null;
   currency?: string;
   image_url?: string | null;
+  image_urls?: string[];
   favicon_url?: string | null;
   tags?: string[];
   category_id?: string | null;
@@ -95,6 +98,47 @@ export interface UpdateCategoryBody {
   color?: string | null;
   icon?: string | null;
   is_public?: boolean;
+}
+
+// ---- API Response helpers ----
+
+// ---- Profile types ----
+
+export interface Profile {
+  id: string;
+  nickname: string | null;
+  avatar_url: string | null;
+  avatar_type: 'upload' | 'preset' | null;
+  avatar_preset_id: number | null;
+  phone: string | null;
+  updated_at: string;
+}
+
+export interface ProfileResponse {
+  id: string;
+  email: string;
+  nickname: string | null;
+  avatar_url: string | null;
+  avatar_type: 'upload' | 'preset' | null;
+  avatar_preset_id: number | null;
+  phone: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  stats: {
+    total_cards: number;
+    archived_cards: number;
+    public_cards: number;
+    total_categories: number;
+    last_activity: string | null;
+  };
+}
+
+export interface UpdateProfileBody {
+  nickname?: string | null;
+  phone?: string | null;
+  avatar_url?: string | null;
+  avatar_type?: 'upload' | 'preset';
+  avatar_preset_id?: number | null;
 }
 
 // ---- API Response helpers ----

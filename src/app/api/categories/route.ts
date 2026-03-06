@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sanitizeText, sanitizeOptional } from '@/lib/sanitize';
 import type { CreateCategoryBody, ApiError, PaginatedResponse, Category } from '@/types/database';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -124,11 +125,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     .from('categories')
     .insert({
       user_id: user.id,
-      name: name.trim(),
+      name: sanitizeText(name),
       slug,
-      description: description ?? null,
+      description: sanitizeOptional(description),
       color: color ?? null,
-      icon: icon ?? null,
+      icon: sanitizeOptional(icon),
       is_public: is_public ?? false,
     })
     .select()

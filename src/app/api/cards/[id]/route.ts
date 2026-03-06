@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sanitizeUpdatePayload } from '@/lib/sanitize';
 import type { UpdateCardBody, ApiError, Card } from '@/types/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -112,20 +113,32 @@ export async function PUT(request: NextRequest, { params }: RouteContext): Promi
   const updates: Record<string, unknown> = {};
   const allowed: (keyof UpdateCardBody)[] = [
     'url', 'title', 'description', 'notes', 'place', 'price', 'currency',
-    'image_url', 'favicon_url', 'tags', 'category_id', 'is_public', 'is_archived',
+    'image_url', 'image_urls', 'favicon_url', 'tags', 'category_id', 'is_public', 'is_archived',
   ];
   for (const key of allowed) {
     if (b[key] !== undefined) updates[key] = b[key];
+  }
+
+  // Синхронизируем image_url ↔ image_urls
+  if ('image_urls' in updates) {
+    const urls = updates.image_urls as string[];
+    updates.image_url = urls[0] ?? null;
+  } else if ('image_url' in updates) {
+    // Если передан только image_url — перестраиваем массив
+    const single = updates.image_url as string | null;
+    updates.image_urls = single ? [single] : [];
   }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json<ApiError>({ error: 'No fields to update' }, { status: 400 });
   }
 
-  // Читаем старый image_url до обновления
+  sanitizeUpdatePayload(updates, ['title', 'description', 'notes', 'place']);
+
+  // Читаем старые URLs до обновления
   const { data: oldCard } = await supabase
     .from('cards')
-    .select('image_url')
+    .select('image_url, image_urls')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -142,8 +155,14 @@ export async function PUT(request: NextRequest, { params }: RouteContext): Promi
     return NextResponse.json<ApiError>({ error: 'Card not found or update failed', details: error?.message }, { status: 404 });
   }
 
-  // Удаляем старое изображение если image_url изменился или был очищен
-  if (
+  // Удаляем из Storage URL-ы, которых больше нет в новом массиве
+  if (oldCard && 'image_urls' in updates) {
+    const newUrls = new Set((updates.image_urls as string[]) ?? []);
+    const removed = (oldCard.image_urls ?? (oldCard.image_url ? [oldCard.image_url] : [])).filter(
+      (u: string) => !newUrls.has(u)
+    );
+    for (const url of removed) await deleteStorageFile(supabase, url);
+  } else if (
     oldCard?.image_url &&
     'image_url' in updates &&
     oldCard.image_url !== (data as Card).image_url
@@ -169,10 +188,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext): P
     return NextResponse.json<ApiError>({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Читаем карточку до удаления, чтобы получить image_url
+  // Удаляем все изображения из Storage при удалении карточки
   const { data: cardToDelete, error: fetchError } = await supabase
     .from('cards')
-    .select('image_url')
+    .select('image_url, image_urls')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -191,10 +210,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext): P
     return NextResponse.json<ApiError>({ error: 'Failed to delete card', details: error.message }, { status: 500 });
   }
 
-  // Удаляем изображение из Storage после удачного удаления карточки
-  if (cardToDelete.image_url) {
-    await deleteStorageFile(supabase, cardToDelete.image_url);
-  }
+  // Удаляем все изображения из Storage
+  const allUrls: string[] = cardToDelete.image_urls?.length
+    ? cardToDelete.image_urls
+    : cardToDelete.image_url
+    ? [cardToDelete.image_url]
+    : [];
+  for (const fileUrl of allUrls) await deleteStorageFile(supabase, fileUrl);
 
   return new NextResponse(null, { status: 204 });
 }

@@ -23,6 +23,7 @@ import { useForm } from '@mantine/form';
 import { Dropzone, IMAGE_MIME_TYPE, FileWithPath } from '@mantine/dropzone';
 import { IconUpload, IconPhoto, IconX, IconTrash } from '@tabler/icons-react';
 import { useState, useCallback } from 'react';
+import { notifications } from '@mantine/notifications';
 import { z } from 'zod';
 import type { Category } from '@/types/database';
 
@@ -279,9 +280,18 @@ export function CardForm({
           {totalImages < MAX_IMAGES && (
             <Dropzone
               onDrop={handleDrop}
-              onReject={(files) =>
-                console.warn('Отклонены файлы:', files.map((f) => f.errors))
-              }
+              onReject={(files) => {
+                files.forEach(({ file, errors }) => {
+                  const first = errors[0];
+                  const msg =
+                    first?.code === 'file-too-large'
+                      ? `«${file.name}» слишком большой. Максимум — ${MAX_IMAGE_SIZE_MB} МБ.`
+                      : first?.code === 'file-invalid-type'
+                      ? `«${file.name}» — недопустимый формат. Разрешены: PNG, JPG, WEBP, GIF, AVIF.`
+                      : `«${file.name}» отклонён.`;
+                  notifications.show({ message: msg, color: 'red', autoClose: 5000 });
+                });
+              }}
               maxSize={MAX_IMAGE_SIZE_MB * 1024 * 1024}
               accept={IMAGE_MIME_TYPE}
               multiple

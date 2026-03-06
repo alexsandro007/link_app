@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sanitizeUpdatePayload } from '@/lib/sanitize';
 import type { UpdateCategoryBody, ApiError, Category } from '@/types/database';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -100,6 +101,8 @@ export async function PUT(request: NextRequest, { params }: RouteContext): Promi
   if (Object.keys(updates).length === 0) {
     return NextResponse.json<ApiError>({ error: 'No fields to update' }, { status: 400 });
   }
+
+  sanitizeUpdatePayload(updates, ['name', 'description', 'icon']);
 
   const { data, error } = await supabase
     .from('categories')

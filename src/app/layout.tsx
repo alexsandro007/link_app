@@ -4,6 +4,7 @@ import "./globals.css";
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dropzone/styles.css';
+import '@mantine/carousel/styles.css';
 import { ColorSchemeScript } from '@mantine/core';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';

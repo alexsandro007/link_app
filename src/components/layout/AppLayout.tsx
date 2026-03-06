@@ -15,7 +15,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { IconCards, IconSettings, IconLogout, IconBookmarks, IconCategory, IconSun, IconMoon } from '@tabler/icons-react';
+import { IconCards, IconSettings, IconLogout, IconBookmarks, IconCategory, IconSun, IconMoon, IconUser } from '@tabler/icons-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
@@ -110,6 +110,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           label="Настройки"
           leftSection={<IconSettings size={16} />}
           active={pathname === '/settings'}
+          style={{ borderRadius: 6 }}
+        />
+        <NavLink
+          component={Link}
+          href="/profile"
+          label="Профиль"
+          leftSection={<IconUser size={16} />}
+          active={pathname === '/profile'}
           style={{ borderRadius: 6 }}
         />
       </AppShell.Navbar>

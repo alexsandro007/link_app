@@ -24,7 +24,7 @@ import {
   IconSortAscending,
   IconSortDescending,
 } from '@tabler/icons-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { FileWithPath } from '@mantine/dropzone';
 
 import { withAuth } from '@/components/ProtectedRoute';
@@ -32,7 +32,7 @@ import { CardForm, type CardFormValues } from '@/components/cards/CardForm';
 import { CardList } from '@/components/cards/CardList';
 import { useCards, type UseCardsFilters, type SortField } from '@/hooks/useCards';
 import { useCategories } from '@/hooks/useCategories';
-import { uploadImageToSupabase } from '@/lib/supabase/storage';
+import { uploadViaServer } from '@/lib/supabase/storage';
 import type { Card } from '@/types/database';
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -80,25 +80,37 @@ function DashboardPage() {
 
   /* ── Submit формы ──────────────────────────────────────────────────────── */
   const handleFormSubmit = useCallback(
-    async (values: CardFormValues, newFiles: FileWithPath[], _removedUrls: string[]) => {
-      let image_url: string | null = editingCard?.image_url ?? null;
+    async (values: CardFormValues, newFiles: FileWithPath[], removedUrls: string[]) => {
+      // Определяем уже существующие URL (те что остались после удалений)
+      const existingUrls: string[] = editingCard?.image_urls?.length
+        ? editingCard.image_urls.filter((u) => !removedUrls.includes(u))
+        : editingCard?.image_url && !removedUrls.includes(editingCard.image_url)
+        ? [editingCard.image_url]
+        : [];
 
+      // Загружаем все новые файлы параллельно
+      const uploadedUrls: string[] = [];
       if (newFiles.length > 0) {
-        const result = await uploadImageToSupabase(newFiles[0], {
-          cardId: editingCard?.id,
-        });
-        if (result.ok) {
-          image_url = result.publicUrl;
-        } else {
-          notifications.show({
-            message: `Не удалось загрузить изображение: ${result.message}`,
-            color: 'orange',
-            autoClose: 4000,
-          });
+        const results = await Promise.all(
+          newFiles.map((file) => uploadViaServer(file, { cardId: editingCard?.id }))
+        );
+        for (const result of results) {
+          if (result.ok) {
+            uploadedUrls.push(result.publicUrl);
+          } else {
+            notifications.show({
+              message: `Не удалось загрузить изображение: ${result.message}`,
+              color: 'orange',
+              autoClose: 4000,
+            });
+          }
         }
       }
 
-      const body = { ...values, image_url };
+      const image_urls = [...existingUrls, ...uploadedUrls];
+      const image_url = image_urls[0] ?? null;
+
+      const body = { ...values, image_url, image_urls };
       const url = editingCard ? `/api/cards/${editingCard.id}` : '/api/cards';
       const method = editingCard ? 'PUT' : 'POST';
 
@@ -288,7 +300,13 @@ function DashboardPage() {
         <CardForm
           key={editingCard?.id ?? 'new'}
           initialValues={formInitialValues}
-          initialImages={editingCard?.image_url ? [editingCard.image_url] : []}
+          initialImages={
+            editingCard?.image_urls?.length
+              ? editingCard.image_urls
+              : editingCard?.image_url
+              ? [editingCard.image_url]
+              : []
+          }
           categories={categories}
           mode={editingCard ? 'edit' : 'create'}
           onSubmit={handleFormSubmit}
