@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import { useState } from 'react';
 import '@mantine/carousel/styles.css';
 import {
   Card,
@@ -14,6 +15,7 @@ import {
   Menu,
   Skeleton,
   Box,
+  Modal,
   rem,
 } from '@mantine/core';
 import { Carousel } from '@mantine/carousel';
@@ -28,6 +30,8 @@ import {
   IconTag,
   IconMapPin,
   IconBookmark,
+  IconChevronLeft,
+  IconChevronRight,
 } from '@tabler/icons-react';
 import { useClipboard } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -79,7 +83,13 @@ function getEmptyCardStyle(title: string): { bg: string; fg: string } {
 
 // ── Превью изображений: одно или карусель
 
-function CardImageSection({ card }: { card: CardType }) {
+function CardImageSection({
+  card,
+  onImageClick,
+}: {
+  card: CardType;
+  onImageClick: (imgs: string[], idx: number) => void;
+}) {
   const images: string[] = card.image_urls?.length
     ? card.image_urls
     : card.image_url
@@ -112,7 +122,10 @@ function CardImageSection({ card }: { card: CardType }) {
 
   if (images.length === 1) {
     return (
-      <Card.Section>
+      <Card.Section
+        style={{ cursor: 'zoom-in' }}
+        onClick={() => onImageClick(images, 0)}
+      >
         <Image
           src={images[0]}
           alt={card.title}
@@ -151,13 +164,18 @@ function CardImageSection({ card }: { card: CardType }) {
       >
         {images.map((src, i) => (
           <Carousel.Slide key={src}>
-            <Image
-              src={src}
-              alt={`${card.title} — фото ${i + 1}`}
-              h={140}
-              fit="cover"
-              fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f1f3f5'/%3E%3C/svg%3E"
-            />
+            <Box
+              style={{ cursor: 'zoom-in' }}
+              onClick={() => onImageClick(images, i)}
+            >
+              <Image
+                src={src}
+                alt={`${card.title} — фото ${i + 1}`}
+                h={140}
+                fit="cover"
+                fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f1f3f5'/%3E%3C/svg%3E"
+              />
+            </Box>
           </Carousel.Slide>
         ))}
       </Carousel>
@@ -169,6 +187,16 @@ function CardImageSection({ card }: { card: CardType }) {
 
 export function CardItem({ card, category, onEdit, onDelete, onArchive }: CardItemProps) {
   const clipboard = useClipboard({ timeout: 1500 });
+  const [lightbox, setLightbox] = useState<{ images: string[]; idx: number } | null>(null);
+
+  const handleLightboxPrev = () =>
+    setLightbox((lb) =>
+      lb ? { ...lb, idx: (lb.idx - 1 + lb.images.length) % lb.images.length } : null,
+    );
+  const handleLightboxNext = () =>
+    setLightbox((lb) =>
+      lb ? { ...lb, idx: (lb.idx + 1) % lb.images.length } : null,
+    );
 
   const handleCopyLink = () => {
     clipboard.copy(card.url);
@@ -178,19 +206,72 @@ export function CardItem({ card, category, onEdit, onDelete, onArchive }: CardIt
   const priceLabel = formatPrice(card.price, card.currency ?? 'USD');
 
   return (
-    <Card
-      shadow="sm"
-      padding="sm"
-      radius="md"
-      withBorder
-      style={{
-        opacity: card.is_archived ? 0.6 : 1,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <CardImageSection card={card} />
+    <>
+      <Modal
+        opened={lightbox !== null}
+        onClose={() => setLightbox(null)}
+        size="xl"
+        centered
+        padding="md"
+        overlayProps={{ backgroundOpacity: 0.85, blur: 2 }}
+        title={
+          lightbox && lightbox.images.length > 1
+            ? `${lightbox.idx + 1} / ${lightbox.images.length}`
+            : card.title
+        }
+      >
+        {lightbox && (
+          <Stack align="center" gap="md">
+            <Image
+              src={lightbox.images[lightbox.idx]}
+              alt={card.title}
+              fit="contain"
+              mah="75vh"
+              radius="sm"
+            />
+            {lightbox.images.length > 1 && (
+              <Group justify="center" gap="md">
+                <ActionIcon
+                  variant="default"
+                  size="lg"
+                  onClick={handleLightboxPrev}
+                  aria-label="Предыдущее фото"
+                >
+                  <IconChevronLeft size={18} />
+                </ActionIcon>
+                <Text size="sm" c="dimmed">
+                  {lightbox.idx + 1} из {lightbox.images.length}
+                </Text>
+                <ActionIcon
+                  variant="default"
+                  size="lg"
+                  onClick={handleLightboxNext}
+                  aria-label="Следующее фото"
+                >
+                  <IconChevronRight size={18} />
+                </ActionIcon>
+              </Group>
+            )}
+          </Stack>
+        )}
+      </Modal>
+
+      <Card
+        shadow="sm"
+        padding="sm"
+        radius="md"
+        withBorder
+        style={{
+          opacity: card.is_archived ? 0.6 : 1,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <CardImageSection
+          card={card}
+          onImageClick={(imgs, idx) => setLightbox({ images: imgs, idx })}
+        />
 
       <Stack gap={6} mt="sm" style={{ flex: 1 }}>
         {/* Верхняя строка: категория + бейджи + меню */}
@@ -330,6 +411,7 @@ export function CardItem({ card, category, onEdit, onDelete, onArchive }: CardIt
         )}
       </Stack>
     </Card>
+    </>
   );
 }
 

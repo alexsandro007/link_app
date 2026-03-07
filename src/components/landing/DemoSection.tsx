@@ -192,7 +192,7 @@ export function DemoSection() {
               component={Link}
               href="/auth/signup"
             >
-              Добавить свои карточки →
+              Добавить свои карточки
             </Button>
             <Text size="xs" c="dimmed">
               Бесплатно, без кредитной карты

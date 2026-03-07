@@ -121,10 +121,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   updates.updated_at = new Date().toISOString();
 
-  // Используем admin-клиент для upsert, чтобы обойти политику INSERT в RLS.
-  // Пользователь уже аутентифицирован выше — user.id явно прописан в записи.
-  const admin = createAdminClient();
-  const { data, error } = await admin
+  // Используем обычный server-клиент: RLS-политики «update own» и «insert own»
+  // уже разрешают пользователю обновлять/создавать свою строку.
+  const { data, error } = await supabase
     .from('profiles')
     .upsert({ id: user.id, ...updates })
     .select()

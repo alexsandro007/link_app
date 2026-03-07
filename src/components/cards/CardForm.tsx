@@ -22,7 +22,7 @@ import {
 import { useForm } from '@mantine/form';
 import { Dropzone, IMAGE_MIME_TYPE, FileWithPath } from '@mantine/dropzone';
 import { IconUpload, IconPhoto, IconX, IconTrash } from '@tabler/icons-react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { z } from 'zod';
 import type { Category } from '@/types/database';
@@ -178,7 +178,49 @@ export function CardForm({
   const removeExistingImage = useCallback((url: string) => {
     setExistingImages((prev) => prev.filter((u) => u !== url));
   }, []);
+  // ── Paste from clipboard ───────────────────────────────────────────────────────────
 
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Не перехватывать, если пользователь вводит текст в поле ввода
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const imageItems = items.filter((item) => item.type.startsWith('image/'));
+      if (imageItems.length === 0) return;
+
+      const files: FileWithPath[] = [];
+      for (const item of imageItems) {
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        if (blob.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+          notifications.show({
+            message: `Изображение из буфера слишком большое. Максимум — ${MAX_IMAGE_SIZE_MB} МБ.`,
+            color: 'red',
+            autoClose: 5000,
+          });
+          continue;
+        }
+        const file = Object.assign(blob, {
+          path: `paste-${Date.now()}.png`,
+        }) as FileWithPath;
+        files.push(file);
+      }
+
+      if (files.length > 0) {
+        handleDrop(files);
+        notifications.show({
+          message: 'Изображение из буфера добавлено',
+          color: 'teal',
+          autoClose: 2000,
+        });
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleDrop]);
   // ── Submit ──────────────────────────────────────────────────────────────────
 
   const handleSubmit = form.onSubmit(async (values) => {
@@ -250,7 +292,7 @@ export function CardForm({
               placeholder="Выберите категорию"
               data={categoryOptions}
               clearable
-              searchable
+              maxDropdownHeight={220}
               {...form.getInputProps('category_id')}
             />
           )}
@@ -310,7 +352,7 @@ export function CardForm({
 
                 <Stack gap={4} ta="center">
                   <Text size="sm" fw={500}>
-                    Перетащите изображения или нажмите для выбора
+                    Перетащите, нажмите для выбора или вставьте из буфера (Ctrl+V)
                   </Text>
                   <Text size="xs" c="dimmed">
                     PNG, JPG, WEBP, GIF — до {MAX_IMAGE_SIZE_MB} МБ каждый
