@@ -38,11 +38,11 @@ export function LandingHeader() {
               Linkery
             </Text>
           </Group>
-          <Group gap="sm">
+          <Group gap={4}>
             <ActionIcon
               variant="subtle"
               color="gray"
-              size="xl"
+              size="md"
               aria-label="Переключить тему"
               onClick={() =>
                 setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark')
